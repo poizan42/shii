@@ -1,5 +1,7 @@
 main_loop()
 {
+	local cmd
+
 	rm "$pipe"
 	rmdir "$tmp_dir"
 	

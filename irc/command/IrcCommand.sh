@@ -92,7 +92,11 @@ IrcCommand_getUser() #this:IrcCommand
 IrcCommand_getParameters() #this:IrcCommand
 {
 	local this="$1"
-	printf '%s' "$this" | tail -n +9
+	printf '%s' "$this" |
+	(
+		IFS="$CR" read -r x x x x x x x x parameters
+		printf '%s' "$parameters"
+	)
 }
 
 # returns a string that can be eval'ed to get the values more efficiently
