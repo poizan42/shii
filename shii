@@ -1,0 +1,20 @@
+#!/bin/sh
+#ii -s irc.freenode.net -i $irc_dir -n $irc_username -f $irc_realname &
+
+dir="$(readlink -f "$(dirname "$0")")"
+run_dir="$runtime_dir_base/$$"
+mkdir -p "$run_dir"
+
+. $dir/load_args.sh
+
+. $dir/irc/ShiiUtils.sh
+. $dir/irc/IrcClient.sh
+. $dir/irc/IrcNumerics.sh
+. $dir/irc/command/IrcCommand.sh
+
+. $dir/shii_main.sh
+
+tmp_dir="$(mktemp -d)"
+pipe="$tmp_dir/pipe"
+mkfifo "$pipe"
+nc "$irc_server" "$irc_port" < "$pipe" | sed -u 's/\r$//' | main_loop | sed -u 's/$/\r/' > "$pipe"
