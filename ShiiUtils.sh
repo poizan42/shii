@@ -1,6 +1,8 @@
 NL="$(printf '\n')"
 CR="$(printf '\r')"
 
+ERR_PIPEBROKEN=100
+
 ShiiUtils_escape()
 {
 	input="$1"

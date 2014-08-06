@@ -16,9 +16,9 @@ IrcClient_nick() #nickname: string
 
 IrcClient_user() #username:string, realname:string
 {
-	username="$1"; realname="$2"
-	mode=8
-	command="USER $username $mode *  : $realname;"
+	local username="$1" realname="$2"
+	local mode=8
+	command="USER $username $mode * :$realname;"
 	IrcClient_execute "$command" USERINF
 }
 
@@ -57,19 +57,18 @@ IrcClient_execute() #command:string, logLevel:LogLevel
 IrcClient_log() #command:string, logLevel:LogLevel
 {
 	command="$1"; logLevel="$2"
-	printf '%s\n' "<-- ($logLevel) $command" > &2
+	printf '%s\n' "<-- ($logLevel) $command" >&2
 }
 
 IrcClient_getLine()
 {
-	if ! read LINE; then
+	if ! read -r LINE && [ -z "$LINE" ]; then
 		return $ERR_PIPEBROKEN
 	fi
-	printf '%s\n' "$LINE"
+	printf '%s' "$LINE"
 }
 
 IrcClient_getCommand()
 {
-	LINE="$(IrcClient_getLine)" &&
-	IrcCommand_parse "$LINE"
+	line="$(IrcClient_getLine)" && IrcCommand_parse "$line"
 }

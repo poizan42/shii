@@ -2,9 +2,10 @@ irc_server=irc.freenode.net
 irc_port=6667
 irc_dir="$HOME/irc"
 irc_nick="$USER"
-runtime_dir_base="/var/run"
+irc_username="$USER"
+runtime_dir_base="/tmp/shii"
 
-while getopts ":s:i:n:f:k:r:" opt; do
+while getopts ":s:i:n:u:f:k:r:" opt; do
 	case $opt in
 		s)
 			irc_server="$OPTARG"
@@ -13,6 +14,9 @@ while getopts ":s:i:n:f:k:r:" opt; do
 			irc_dir="$OPTARG"
 			;;
 		n)
+			irc_nick="$OPTARG"
+			;;
+		u)
 			irc_username="$OPTARG"
 			;;
 		f)

@@ -9,10 +9,14 @@ IrcCommand_create() #fullCommand:string, command:string, params:string, has_pref
 		has_prefix=0
 	fi
 	local parameters="$(_IrcCommand_parseParams "$params")"
+	#tmp="$(
 	printf 'IrcCommand\r%s\r%s\r%s\r%s\r%s\r%s\r%s\r%s' \
 		"$fullCommand" "$command" "$params" \
 		"$has_prefix" "$p_host" "$p_nickOrServer" "$p_user" \
 		"$parameters"
+	#)"
+	#printf '%s' "$tmp" | sed 's/\r/\n/g' >&2
+	#printf '%s' "$tmp"
 }
 
 IrcCommand_getFullCommand() #this:IrcCommand
@@ -98,9 +102,10 @@ IrcCommand_unpack() #this:IrcCommand,prefix:string
 	# The escaping won't affect the newline delimiters
 	ShiiUtils_escapeInner "$this" |
 	(
-		IFS="$CR" read -r x fullCommand commandName paramsStr hasPrefix host nickOrServer user parameters
+		IFS="$CR" read -r class fullCommand commandName paramsStr hasPrefix host nickOrServer user parameters
 		local p="local $prefix"
 		printf "
+			${p}class='%s';
 			${p}fullCommand='%s';
 			${p}commandName='%s';
 			${p}paramsStr='%s';
@@ -109,6 +114,7 @@ IrcCommand_unpack() #this:IrcCommand,prefix:string
 			${p}nickOrServer='%s';
 			${p}user='%s';
 			${p}parameters='%s'" \
+			"$class" \
 			"$fullCommand" "$commandName" "$paramsStr" \
 			"$hasPrefix" "$host" "$nickOrServer" \
 			"$user" "$parameters"
@@ -118,12 +124,8 @@ IrcCommand_unpack() #this:IrcCommand,prefix:string
 _IrcCommand_parseParams() #params:string
 {
 	local params="$1"
-	echo "params=$(printf '%s' "$params" | sed -r 's/\r/\n/g')" >&2
-	tmp="$(
 	printf '%s' "$params" |
-		sed -r '{1 s/(.) ?:/\1\r/};t rep;{s/ /\r/g};{:rep;s/ (.*\r)/\r\1/g;t rep}')"
-	printf '%s' "$tmp" | sed -r 's/\r/\n/g' >&2
-	printf '%s' "$tmp"
+		sed -r '{1 s/(.) ?:/\1\r/};t rep;{s/ /\r/g};{:rep;s/ (.*\r)/\r\1/g;t rep}'
 }
 
 _IrcCommand_parsedToVars() #
@@ -143,11 +145,19 @@ _IrcCommand_parsedToVars() #
 IrcCommand_parse() #cmdStr:string
 {
 	local cmdStr="$1"
-	# We escape this safely because " and ' has no significance
+	printf '%s' "$cmdStr" | IrcCommand_parsePipe
+}
+
+IrcCommand_parsePipe() #->cmdStr
+{
+	# We can escape this safely because " and ' has no significance
 	# in the command format
-	local parsed="$(printf '%s' "$cmdStr" |
-		ShiiUtils_escapeInnerPipe |
+	#read LINE
+	#printf '%s\n' "LINE=$LINE" >&2
+	#local parsed="$(printf '%s' "$LINE" | ShiiUtils_escapeInnerPipe |
+	local parsed="$(ShiiUtils_escapeInnerPipe |
 		sed -r 's/^((:)([^!@ ]*)((!([^@ ]*))?@([^ ]*))?\s+)?([^ ]*)\s*(.*)/'"'\8' '\9' '\2' '\7' '\3' '\6'/")"
+	#echo "parsed=$parsed" | sed -r 's/\r/\n/g' >&2
 	eval "_IrcCommand_parsedToVars $parsed"
 	IrcCommand_create "$cmdStr" "$commandName" "$params" "$hasPrefix" "$p_host" "$p_nickOrServer" "$p_user"
 	unset commandName params hasPrefix p_host p_nickOrServer p_host
