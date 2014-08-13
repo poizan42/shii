@@ -64,7 +64,7 @@ IrcClient_getLine()
 {
 	local LINE
 	if ! read -r LINE && [ -z "$LINE" ]; then
-		return $ERR_PIPEBROKEN
+		return $ERR_SHII_PIPEBROKEN
 	fi
 	printf '%s' "$LINE"
 }

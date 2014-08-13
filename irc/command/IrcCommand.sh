@@ -94,7 +94,7 @@ IrcCommand_getParameters() #this:IrcCommand
 	local this="$1"
 	printf '%s' "$this" |
 	(
-		IFS="$CR" read -r x x x x x x x x parameters
+		IFS="$CR" read -r x x x x x x x x parameters x
 		printf '%s' "$parameters"
 	)
 }
@@ -103,10 +103,10 @@ IrcCommand_getParameters() #this:IrcCommand
 IrcCommand_unpack() #this:IrcCommand,prefix:string
 {
 	local this="$1"; local prefix="$2"
-	# The escaping won't affect the newline delimiters
+	# The escaping won't affect the CR delimiters
 	ShiiUtils_escapeInner "$this" |
 	(
-		IFS="$CR" read -r class fullCommand commandName paramsStr hasPrefix host nickOrServer user parameters
+		IFS="$CR" read -r class fullCommand commandName paramsStr hasPrefix host nickOrServer user parameters extra
 		local p="local $prefix"
 		printf "
 			${p}class='%s';
@@ -117,19 +117,44 @@ IrcCommand_unpack() #this:IrcCommand,prefix:string
 			${p}host='%s';
 			${p}nickOrServer='%s';
 			${p}user='%s';
-			${p}parameters='%s'" \
+			${p}parameters='%s';" \
 			"$class" \
 			"$fullCommand" "$commandName" "$paramsStr" \
 			"$hasPrefix" "$host" "$nickOrServer" \
 			"$user" "$parameters"
+		if [ class != 'IrcCommand' ]; then
+			_${class}_unpackExtra "$extra" "$prefix"
+		fi
 	)
 }
+
+#_IrcCommand_parseParams() #params:string
+#{
+#	local params="$1"
+#	printf '%s' "$params" |
+#		sed -r '{1 s/(.) ?:/\1\r/};t rep;{s/ /\r/g};{:rep;s/ (.*\r)/\r\1/g;t rep}'
+#}
 
 _IrcCommand_parseParams() #params:string
 {
 	local params="$1"
 	printf '%s' "$params" |
-		sed -r '{1 s/(.) ?:/\1\r/};t rep;{s/ /\r/g};{:rep;s/ (.*\r)/\r\1/g;t rep}'
+		Csed -r '
+			{1 s/(.) ?:/\1\r/}
+			t rep
+			{s/ /\r/g}
+			{
+				:rep
+				s/ (.*\r)/\r\1/g
+				t rep
+			}
+			{
+				'"s/'/'\\\\''/g
+			}
+			{
+				s/\r/' '/g
+				s/^.*$/'\0'/
+			}"
 }
 
 _IrcCommand_parsedToVars() #
@@ -160,9 +185,21 @@ IrcCommand_parsePipe() #->cmdStr
 	#printf '%s\n' "LINE=$LINE" >&2
 	#local parsed="$(printf '%s' "$LINE" | ShiiUtils_escapeInnerPipe |
 	local parsed="$(ShiiUtils_escapeInnerPipe |
-		sed -r 's/^((:)([^!@ ]*)((!([^@ ]*))?@([^ ]*))?\s+)?([^ ]*)\s*(.*)/'"'\8' '\9' '\2' '\7' '\3' '\6'/")"
+		Csed -r 's/^((:)([^!@ ]*)((!([^@ ]*))?@([^ ]*))?\s+)?([^ ]*)\s*(.*)/'"'\8' '\9' '\2' '\7' '\3' '\6'/")"
 	#echo "parsed=$parsed" | sed -r 's/\r/\n/g' >&2
 	eval "_IrcCommand_parsedToVars $parsed"
-	IrcCommand_create "$cmdStr" "$commandName" "$params" "$hasPrefix" "$p_host" "$p_nickOrServer" "$p_user"
-	unset commandName params hasPrefix p_host p_nickOrServer p_host
+	local class commandName params hasPrefix p_host p_nickOrServer p_user
+	ShiiUtils_dictLoad IrcCommand_command "$commandName" '$class'
+	if [ -z "$class" ]; then
+		class=IrcCommand
+	fi
+	"${class}_create" "$cmdStr" "$commandName" "$params" "$hasPrefix" "$p_host" "$p_nickOrServer" "$p_user"
 }
+
+IrcCommand_addCommand() #cmd:Class,name:String
+{
+	local cmd="$1" name="$2"
+	ShiiUtils_dictStore IrcCommand_command "$name" "$cmd"
+}
+
+IrcCommand_addCommand IrcCommand PING
